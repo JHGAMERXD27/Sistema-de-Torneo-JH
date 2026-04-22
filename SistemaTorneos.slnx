@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="SistemaTorneos.API/SistemaTorneos.API.csproj" />
+  <Project Path="SistemaTorneos.Application/SistemaTorneos.Application.csproj" />
+  <Project Path="SistemaTorneos.Core/SistemaTorneos.Core.csproj" />
+  <Project Path="SistemaTorneos.Infrastructure/SistemaTorneos.Infrastructure.csproj" />
+</Solution>
