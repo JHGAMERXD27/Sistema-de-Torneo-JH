@@ -1,9 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using SistemaTorneos.Application.Services;
 using SistemaTorneos.Core.Entities;
-using SistemaTorneos.Core.Interfaces;
 using SistemaTorneos.Infrastructure.Data;
-using Microsoft.EntityFrameworkCore;
 
 namespace SistemaTorneos.API.Controllers
 {
@@ -11,49 +10,40 @@ namespace SistemaTorneos.API.Controllers
     [Route("api/[controller]")]
     public class TorneosController : ControllerBase
     {
-        private readonly IJugadorRepository _jugadorRepository;
         private readonly TorneoService _torneoService;
         private readonly TorneoDbContext _context;
 
-        public TorneosController(IJugadorRepository jugadorRepository, TorneoService torneoService, TorneoDbContext context)
+        public TorneosController(TorneoService torneoService, TorneoDbContext context)
         {
-            _jugadorRepository = jugadorRepository;
             _torneoService = torneoService;
             _context = context;
         }
 
         [HttpPost("crear-ronda-inicial")]
-        public async Task<ActionResult<List<Encuentro>>> GenerarBrackets()
+        public async Task<ActionResult> Iniciar() => Ok(await _torneoService.GenerarRondaInicial());
+
+        [HttpPost("avanzar-ronda")]
+        public async Task<ActionResult> Avanzar() => Ok(await _torneoService.GenerarSiguienteRonda());
+
+        [HttpGet("encuentros")]
+        public async Task<ActionResult> Get() => Ok(await _context.Encuentros.OrderBy(e => e.Ronda).ToListAsync());
+
+        [HttpPut("registrar-ganador/{id}")]
+        public async Task<IActionResult> Ganador(int id, [FromBody] string nombre)
         {
-            var jugadores = await _jugadorRepository.GetAllAsync();
-            var listaJugadores = jugadores.ToList();
-
-            // Generamos los encuentros con ID de torneo ficticio 1 por ahora
-            var encuentros = _torneoService.GenerarEnfrentamientos(listaJugadores, 1);
-
-            // GUARDAR EN BASE DE DATOS
-            _context.Encuentros.AddRange(encuentros);
+            var e = await _context.Encuentros.FindAsync(id);
+            if (e == null) return NotFound();
+            e.Ganador = nombre;
             await _context.SaveChangesAsync();
-
-            return Ok(encuentros);
+            return Ok();
         }
 
-        [HttpGet("ver-encuentros")]
-        public async Task<ActionResult<List<Encuentro>>> GetEncuentros()
+        [HttpDelete("limpiar-torneo")]
+        public async Task<IActionResult> Limpiar()
         {
-            return await _context.Encuentros.ToListAsync();
-        }
-        [HttpPost("registrar-ganador")]
-        public async Task<ActionResult> RegistrarGanador(int encuentroId, string nombreGanador)
-        {
-            var encuentro = await _context.Encuentros.FindAsync(encuentroId);
-
-            if (encuentro == null) return NotFound("Encuentro no encontrado");
-
-            encuentro.Ganador = nombreGanador;
+            _context.Encuentros.RemoveRange(_context.Encuentros);
             await _context.SaveChangesAsync();
-
-            return Ok($"Se registró a {nombreGanador} como ganador del encuentro {encuentroId}");
+            return Ok();
         }
     }
 }
